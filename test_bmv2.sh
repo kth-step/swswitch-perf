@@ -1,9 +1,10 @@
 #!/bin/bash
+set -euo pipefail
 
 # This script takes the location of Pktgen-DPDK as a command-line argument.
 
-# First, you need to set up hugepages: sudo python3 dpdk-hugepages.py -p 1G --setup 2G
-# Then, get the .json file: "p4c --target bmv2 --arch v1model --std p4-16 <prog>.p4"
+# First, run setuptest_env.sh on every boot.
+# For this test, you need to get the .json file of the relevant P4 program: "p4c --target bmv2 --arch v1model --std p4-16 <prog>.p4"
 
 # To just try out BMv2:
 #  simple_switch -i 0@s1-eth1 -i 1@s1-eth2 <prog>.json &
@@ -21,21 +22,21 @@ if [ $# -ne 1 ]; then
     echo "Example: sudo $0 /home/my_user/src/Pktgen-DPDK/"
     exit 1
 fi
-PKTGEN_DIR="$1"
-# Verify PKTGEN_DIR exists
+PKTGEN_DIR="${1%/}"
 if [ ! -d "$PKTGEN_DIR" ]; then
     echo "Error: Directory '$PKTGEN_DIR' does not exist"
     exit 1
 fi
 
-# Configuration
-SWITCH_APP="simple_switch"  # BMv2 simulator application
-#P4_PROGRAM="vss_v1model_fixtables_bmv2.json"  # Your P4 program in JSON format
-P4_PROGRAM="vss_v1model_fixtables_bmv2_1000.json"  # Your P4 program in JSON format
-CPU_MASK="0x1"  # CPU mask for switch (CPU 0)
-#CPU_MASK="0x80"
-PKTGEN_LCORES="1,2,3,4"  # CPU cores for pktgen
-#PKTGEN_LCORES="3,4"  # CPU cores for pktgen
+# BMv2 simulator application
+SWITCH_APP="simple_switch"
+# Your P4 program in JSON format
+#P4_PROGRAM="vss_v1model_fixtables_bmv2.json"
+P4_PROGRAM="vss_v1model_fixtables_bmv2_1000.json"
+# CPU mask for switch (CPU 7)
+#CPU_MASK="0x1"
+CPU_MASK="0x80"
+PKTGEN_LCORES="1,2,3,4,5"
 TEST_SCRIPT="zero_load_latency.lua"
 #TEST_SCRIPT="rfc_2544_throughput.lua"
 
@@ -44,8 +45,6 @@ VETH1_MAC="02:11:22:33:44:01"
 VETH2_MAC="02:11:22:33:44:02"
 S1ETH1_MAC="02:11:22:33:44:03"
 S1ETH2_MAC="02:11:22:33:44:04"
-
-####################################
 
 check_mac_in_use() {
     local mac=$1
@@ -62,16 +61,27 @@ check_mac_in_use() {
     fi
 }
 
-echo "=== Setting up DPDK environment ==="
-
-# Load required kernel modules
-modprobe uio
-modprobe uio_pci_generic
-modprobe vfio-pci
+echo "=== Setting up veth pairs ==="
 
 # Create veth pairs with optimized settings
 ip link add veth1 type veth peer name s1-eth1
 ip link add veth2 type veth peer name s1-eth2
+
+# Cleanup trap
+cleanup() {
+    echo "Cleaning up..."
+    [[ -n "${SWITCH_PID:-}" ]] && kill -TERM "$SWITCH_PID" 2>/dev/null || true
+    [[ -n "${SWITCH_PID:-}" ]] && wait "$SWITCH_PID" 2>/dev/null || true
+    
+    for iface in veth1 veth2; do
+        ip link del "$iface" 2>/dev/null || true
+    done
+    
+    for iface in veth1 veth2 s1-eth1 s1-eth2; do
+        iptables -D OUTPUT -o "$iface" -p udp --dport 5353 -j DROP 2>/dev/null || true
+    done
+}
+trap cleanup EXIT
 
 for mac in "$VETH1_MAC" "$VETH2_MAC" "$S1ETH1_MAC" "$S1ETH2_MAC"; do
     if check_mac_in_use "$mac"; then
@@ -87,27 +97,16 @@ ip link set veth2 address $VETH2_MAC
 ip link set s1-eth1 address $S1ETH1_MAC
 ip link set s1-eth2 address $S1ETH2_MAC
 
-# Optimize the interfaces for better performance
-# Increase ring buffer sizes
-ip link set veth1 txqueuelen 1024
-ip link set veth2 txqueuelen 1024
-ip link set s1-eth1 txqueuelen 1024
-ip link set s1-eth2 txqueuelen 1024
-
-# Disable IPv6 only on the interfaces we're using
+# Disable IPv6
+# Without this, you may see IPv6 SLAAC
 sysctl -w net.ipv6.conf.veth1.disable_ipv6=1
 sysctl -w net.ipv6.conf.veth2.disable_ipv6=1
 sysctl -w net.ipv6.conf.s1-eth1.disable_ipv6=1
 sysctl -w net.ipv6.conf.s1-eth2.disable_ipv6=1
 
-# Disable various kernel features that add overhead
-for iface in veth1 veth2 s1-eth1 s1-eth2; do
-  # Disable generic segmentation offload
-  ethtool -K $iface gso off tso off gro off 2>/dev/null || true
-  # Disable TCP segmentation offload
-  ethtool -K $iface tx off rx off sg off 2>/dev/null || true
-  # Set MTU
-  ip link set $iface mtu 1500 2>/dev/null || true
+# Disable kernel features that may add overhead
+for iface in s1-eth1 s1-eth2; do
+    ethtool -K $iface gro off 2>/dev/null || true
 done
 
 # Block mDNS traffic specifically on test interfaces
@@ -123,20 +122,13 @@ ip link set s1-eth1 up
 ip link set s1-eth2 up
 
 # Configure IP addresses
+# TODO: Needed?
 ip addr add 10.0.0.1/24 dev veth1
 ip addr add 10.0.0.2/24 dev veth2
 
+# Paranoia
 sleep 1
 
-# Set interrupt affinity to isolate network interrupts from our cores
-for irq in $(grep eth /proc/interrupts | awk '{print $1}' | tr -d ':'); do
-  echo 0 > /proc/irq/$irq/smp_affinity_list 2>/dev/null || true
-done
-
-# Jack up the CPUs - may be running in power save mode
-cpupower frequency-set --governor performance
-
-# Pin BMv2 simulator to CPU 0 (using taskset)
 echo "Starting BMv2 simulator (pinned to CPU(s) with mask $CPU_MASK)..."
 #taskset $CPU_MASK $SWITCH_APP -i 0@s1-eth1 -i 1@s1-eth2 $P4_PROGRAM &
 taskset $CPU_MASK $SWITCH_APP -i 1@s1-eth1 -i 2@s1-eth2 $P4_PROGRAM &
@@ -145,37 +137,16 @@ SWITCH_PID=$!
 # Give the switch time to initialize
 sleep 5
 
-# Start pktgen with correctly sized AF_PACKET options
-echo "Starting pktgen with fixed AF_PACKET parameters..."
-CURR_DIR=$(pwd)
-cd $PKTGEN_DIR
-
-# Calculate proper AF_PACKET parameters (block size must be >= frame size)
-# Also, blocksz must be a power of 2
+# AF_PACKET parameters
 FRAME_SIZE=2048
-BLOCK_SIZE=4096  # Using 4K blocks (power of 2)
+BLOCK_SIZE=4096  # Using 4K blocks (power of 2, must be >= frame size)
 FRAME_COUNT=512  # Number of frames per block
 
-# Use taskset to pin pktgen to specific cores
-taskset -c $PKTGEN_LCORES pktgen -l $PKTGEN_LCORES --proc-type auto \
+echo "=== Launching Pktgen ==="
+export LUA_PATH="${LUA_PATH:-;;};$PKTGEN_DIR/?.lua"
+taskset -c $PKTGEN_LCORES "$PKTGEN_DIR/builddir/app/pktgen" -l $PKTGEN_LCORES --proc-type primary --file-prefix=pktgen_$$ --no-pci \
     --vdev="net_af_packet0,iface=veth1,qpairs=1,blocksz=$BLOCK_SIZE,framesz=$FRAME_SIZE,framecnt=$FRAME_COUNT" \
     --vdev="net_af_packet1,iface=veth2,qpairs=1,blocksz=$BLOCK_SIZE,framesz=$FRAME_SIZE,framecnt=$FRAME_COUNT" \
-    -- -P -m "2.0" -m "3.1" -T -f $CURR_DIR/$TEST_SCRIPT
+    -- -P -m "[2:3].0" -m "[4:5].1" -T -f "$PKTGEN_DIR/scripts/$TEST_SCRIPT"
 
-# Terminate the switch
-echo "Sending termination signal to BMv2 simulator process..."
-kill -TERM $SWITCH_PID 2>/dev/null || true
-wait $SWITCH_PID 2>/dev/null || true
-
-# Clean up
-echo "Cleaning up interfaces..."
-ip link del veth1 2>/dev/null || true
-ip link del veth2 2>/dev/null || true
-
-# Clean up iptables rules
-iptables -D OUTPUT -o veth1 -p udp --dport 5353 -j DROP
-iptables -D OUTPUT -o veth2 -p udp --dport 5353 -j DROP
-iptables -D OUTPUT -o s1-eth1 -p udp --dport 5353 -j DROP
-iptables -D OUTPUT -o s1-eth2 -p udp --dport 5353 -j DROP
-
-echo "Test completed"
+echo "=== BMv2 test completed ==="

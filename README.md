@@ -4,23 +4,23 @@
 
 Follow the regular installation instructions.
 
-## DPDK Setup
+This repository has been tested with the `dev_hol4p4exe` branch of HOL4P4 and the `1.15.2` tag of [BMv2](https://github.com/p4lang/behavioral-model).
 
-Clone the [kth-step fork](https://github.com/kth-step/Pktgen-DPDK) of Pktgen-DPDK, check out the `for_hol4p4` branch and follow the regular installation instructions.
+## DPDK, Pktgen-DPDK Setup
 
-Setup hugepages on every startup:
+This repository has been tested with the `v26.03` tag of [DPDK](https://github.com/DPDK/dpdk) and the `pktgen-26.03.0` tag of [Pktgen-DPDK](https://github.com/pktgen/Pktgen-DPDK).
 
-```bash
-sudo python3 dpdk-hugepages.py -p 1G --setup 2G
-```
+The Lua scripts can be found in the the [kth-step fork](https://github.com/kth-step/Pktgen-DPDK) of Pktgen-DPDK; check out the `for_hol4p4` branch and follow the regular installation instructions.
+
+First, run the `setup_test_env.sh` script on every startup (after every boot). Note that you may have issues reserving hugepages if you don't run the script right after a fresh boot: you may also try to shrink the hugepage size.
 
 Then run e.g.
 
 ```bash
-sudo ./test_hol4p4.sh
+sudo ./test_hol4p4.sh /home/my_user/src/Pktgen-DPDK/
 ```
   
-while ensuring the configuration parameters of the script is what you want.
+while ensuring the configuration parameters and command-line arguments of the script is what you want.
 
 ## petr4 Setup
 
