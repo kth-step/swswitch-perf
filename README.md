@@ -1,16 +1,42 @@
 # Software Switch Performance Testbed
 
-## HOL4P4, BMv2 Setup
+## Dependencies
 
-Follow the regular installation instructions.
+This repository has been tested with
+* [The `dev_hol4p4exe` branch of HOL4P4](https://github.com/kth-step/HOL4P4/tree/dev_hol4p4exe)
+* [BMv2 version `1.15.2`](https://github.com/p4lang/behavioral-model/tree/1.15.2)
+* [DPDK version 26.03.0](https://github.com/DPDK/dpdk/tree/v26.03)
+* [Pktgen-DPDK version 26.03.0](https://github.com/pktgen/Pktgen-DPDK/tree/pktgen-26.03.0)
+* [The `mininet-interface` branch of petr4](https://github.com/verified-network-toolchain/petr4/tree/mininet-interface)
 
-This repository has been tested with the `dev_hol4p4exe` branch of HOL4P4 and the `1.15.2` tag of [BMv2](https://github.com/p4lang/behavioral-model).
 
-## DPDK, Pktgen-DPDK Setup
+## Installation notes
 
-This repository has been tested with the `v26.03` tag of [DPDK](https://github.com/DPDK/dpdk) and the `pktgen-26.03.0` tag of [Pktgen-DPDK](https://github.com/pktgen/Pktgen-DPDK).
+Follow the regular installation instructions. In addition to listed dependencies, the `mininet-interface` branch of petr4 also requires
 
-The Lua scripts can be found in the the [kth-step fork](https://github.com/kth-step/Pktgen-DPDK) of Pktgen-DPDK; check out the `for_hol4p4` branch and follow the regular installation instructions.
+```bash
+opam install rawlink-lwt cohttp-lwt-unix hex
+```
+
+as well as changing `rawlink.lwt` to `rawlink-lwt` in the `bin/dune` file.
+
+After `make`, the a symlink will be located at `./_build/install/default/bin/petr4`. Note that this should not replace your existing petr4 (used by the import tool of HOL4P4) - no need to run `make install`.
+
+Run the switch by running something like
+
+```bash
+sudo petr4 switch -i 0@s1-eth1 -i 1@s1-eth2 -I p4include conditional.p4
+```
+
+where you ensure `petr4` points to `./_build/install/default/bin/petr4` or similar, so that you use what you just built.  Note, the above also requires the virtual network to be set up (`s1-eth1`, `s1-eth2`).
+
+
+## Other dependencies
+
+The Lua scripts run by the test scripts can be found in the the [kth-step fork of Pktgen-DPDK](https://github.com/kth-step/Pktgen-DPDK); check out the `for_hol4p4` branch find them in the `scripts` directory.
+
+
+## Usage
 
 First, run the `setup_test_env.sh` script on every startup (after every boot). Note that you may have issues reserving hugepages if you don't run the script right after a fresh boot: you may also try to shrink the hugepage size.
 
@@ -21,25 +47,3 @@ sudo ./test_hol4p4.sh /home/my_user/src/Pktgen-DPDK/
 ```
   
 while ensuring the configuration parameters and command-line arguments of the script is what you want.
-
-## petr4 Setup
-
-Clone the regular `petr4` repository and check out the `mininet-interface` branch, first install as usual.
-
-The `mininet-interface` branch requires also to do
-
-```bash
-opam install rawlink-lwt cohttp-lwt-unix hex
-```
-
-on top of regular installation instructions, as well as changing `rawlink.lwt` to `rawlink-lwt` in the `bin/dune` file.
-
-After `make`, the a symlink will be located at `./_build/install/default/bin/petr4`. It doesn't seem to replace the existing one, that requires `make install`.
-
-Run the switch by running something like
-
-```bash
-sudo petr4 switch -i 0@s1-eth1 -i 1@s1-eth2 -I p4include conditional.p4
-```
-
-Note, this needs the virtual network to be set up (`s1-eth1`, `s1-eth2`).
