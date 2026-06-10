@@ -3,16 +3,36 @@
 ## Dependencies
 
 This repository has been tested with
-* [The `dev_hol4p4exe` branch of HOL4P4](https://github.com/kth-step/HOL4P4/tree/dev_hol4p4exe)
-* [BMv2 version `1.15.2`](https://github.com/p4lang/behavioral-model/tree/1.15.2)
 * [DPDK version 26.03.0](https://github.com/DPDK/dpdk/tree/v26.03)
 * [Pktgen-DPDK version 26.03.0](https://github.com/pktgen/Pktgen-DPDK/tree/pktgen-26.03.0)
+* [The `dev_hol4p4exe` branch of HOL4P4](https://github.com/kth-step/HOL4P4/tree/dev_hol4p4exe)
+* [BMv2 version `1.15.2`](https://github.com/p4lang/behavioral-model/tree/1.15.2) (in order to compile programs for BMv2, you also need [p4c](https://github.com/p4lang/p4c))
 * [The `mininet-interface` branch of petr4](https://github.com/verified-network-toolchain/petr4/tree/mininet-interface)
 
 
 ## Installation notes
 
-Follow the regular installation instructions. In addition to listed dependencies, the `mininet-interface` branch of petr4 also requires
+The `setup_test_env.sh` uses the `linux-tools` package to set performance mode from the command line. This requires installing
+
+```bash
+sudo apt-get install linux-tools-$(uname -r)
+```
+
+Otherwise, follow the regular installation instructions for the respective repositories, with the additions/exceptions noted below.
+
+### HOL4P4
+
+Note that after following the regular installation instructions, in order to build a software switch from a P4 program, you need to follow the instructions [here](https://github.com/kth-step/HOL4P4/blob/dev_hol4p4exe/hol/retrofit_sem/programs/compilation/README.md).
+
+### petr4
+
+The `mininet-interface` branch is known to compile using version 4.09.1 of the OCaml compiler. This may not be listed by opam, so add the official archive:
+
+```bash
+opam repo add archive git+https://github.com/ocaml/opam-repository-archive
+```
+
+In addition to listed dependencies, the `mininet-interface` branch of petr4 also requires
 
 ```bash
 opam install rawlink-lwt cohttp-lwt-unix hex
