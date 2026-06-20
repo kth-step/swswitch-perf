@@ -22,9 +22,9 @@ if [ ! -d "$PKTGEN_DIR" ]; then
     exit 1
 fi
 
-PKTGEN_LCORES="1,2,3,4,5"
-#TEST_SCRIPT="zero_load_latency.lua"
-TEST_SCRIPT="rfc_2544_throughput.lua"
+PKTGEN_LCORES="1,2,3"
+TEST_SCRIPT="zero_load_latency.lua"
+#TEST_SCRIPT="rfc_2544_throughput.lua"
 #TEST_SCRIPT="line_rate_test.lua"
 
 echo "=== Creating veth pair ==="
@@ -56,6 +56,6 @@ taskset -c $PKTGEN_LCORES "$PKTGEN_DIR/builddir/app/pktgen" \
     --no-pci \
     --vdev="net_af_packet0,iface=veth1,qpairs=1,blocksz=$BLOCK_SIZE,framesz=$FRAME_SIZE,framecnt=$FRAME_COUNT" \
     --vdev="net_af_packet1,iface=veth2,qpairs=1,blocksz=$BLOCK_SIZE,framesz=$FRAME_SIZE,framecnt=$FRAME_COUNT" \
-    -- -P -m "[2:3].0" -m "[4:5].1" -T -f "$PKTGEN_DIR/scripts/$TEST_SCRIPT"
+    -- -P -m "2.0" -m "3.1" -T -f "$PKTGEN_DIR/scripts/$TEST_SCRIPT"
 
 echo "=== veth pair test completed ==="

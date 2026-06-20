@@ -31,10 +31,9 @@ P4_PROGRAM="./conditional_ffi.p4"
 #P4_PROGRAM="./fabric_border_router.p4"
 # P4 include path
 P4_INCLUDE="/home/my_user/src/p4c/p4include"
-# CPU mask for switch (CPU 7)
-#CPU_MASK="0x1"
-CPU_MASK="0x80"
-PKTGEN_LCORES="1,2,3,4,5"
+# CPU mask for switch (CPU 1), note 1-indexation
+CPU_MASK="0x2"
+PKTGEN_LCORES="0,2,3"
 #TEST_SCRIPT="zero_load_latency.lua"
 TEST_SCRIPT="rfc_2544_throughput.lua"
 
@@ -144,6 +143,6 @@ export LUA_PATH="${LUA_PATH:-;;};$PKTGEN_DIR/?.lua"
 taskset -c $PKTGEN_LCORES "$PKTGEN_DIR/builddir/app/pktgen" -l $PKTGEN_LCORES --proc-type primary --file-prefix=pktgen_$$ --no-pci \
     --vdev="net_af_packet0,iface=veth1,qpairs=1,blocksz=$BLOCK_SIZE,framesz=$FRAME_SIZE,framecnt=$FRAME_COUNT" \
     --vdev="net_af_packet1,iface=veth2,qpairs=1,blocksz=$BLOCK_SIZE,framesz=$FRAME_SIZE,framecnt=$FRAME_COUNT" \
-    -- -P -m "[2:3].0" -m "[4:5].1" -T -f "$PKTGEN_DIR/scripts/$TEST_SCRIPT"
+    -- -P -m "2.0" -m "3.1" -T -f "$PKTGEN_DIR/scripts/$TEST_SCRIPT"
 
 echo "=== petr4 test completed ==="

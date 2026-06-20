@@ -3,12 +3,12 @@
 ## Dependencies
 
 This repository has been tested with
-* [DPDK version 26.03.0](https://github.com/DPDK/dpdk/tree/v26.03)
-* [Pktgen-DPDK version 26.03.0](https://github.com/pktgen/Pktgen-DPDK/tree/pktgen-26.03.0)
+* [DPDK version 25.07](https://github.com/DPDK/dpdk/tree/v25.07)
+* [Pktgen-DPDK version 24.10.03](https://github.com/kth-step/Pktgen-DPDK/tree/for_hol4p4_24.10.03)
 * [The `dev_hol4p4exe` branch of HOL4P4](https://github.com/kth-step/HOL4P4/tree/dev_hol4p4exe)
 * [BMv2 version `1.15.2`](https://github.com/p4lang/behavioral-model/tree/1.15.2) (in order to compile programs for BMv2, you also need [p4c](https://github.com/p4lang/p4c))
 * [The `mininet-interface` branch of petr4](https://github.com/verified-network-toolchain/petr4/tree/mininet-interface)
-
+on Ubuntu 26.04.
 
 ## Installation notes
 
@@ -53,7 +53,7 @@ where you ensure `petr4` points to `./_build/install/default/bin/petr4` or simil
 
 ## Other dependencies
 
-The Lua scripts run by the test scripts can be found in the the [kth-step fork of Pktgen-DPDK](https://github.com/kth-step/Pktgen-DPDK); check out the `for_hol4p4` branch find them in the `scripts` directory.
+The Lua scripts run by the test scripts can be found in the the [kth-step fork of Pktgen-DPDK](https://github.com/kth-step/Pktgen-DPDK); check out the `for_hol4p4_24.10.03` branch and find them in the `scripts` directory.
 
 
 ## Usage
