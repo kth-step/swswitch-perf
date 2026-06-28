@@ -12,17 +12,17 @@ on Ubuntu 26.04.
 
 ## Installation notes
 
-The `setup_test_env.sh` uses the `linux-tools` package to ensure performance mode is set. This requires installing
+The `setup_test_env.sh` script uses the `linux-tools` package to ensure performance mode is set. This requires installing
 
 ```bash
 sudo apt-get install linux-tools-$(uname -r)
 ```
 
-Otherwise, follow the regular installation instructions for the respective repositories, with the additions/exceptions noted below.
+Afterward, follow the regular installation instructions for the respective repositories listed above, with the additions/exceptions noted below.
 
 ### HOL4P4
 
-Note that after following the regular installation instructions, in order to build a software switch from a P4 program, you need to follow the instructions [here](https://github.com/kth-step/HOL4P4/blob/dev_hol4p4exe/hol/retrofit_sem/programs/compilation/README.md).
+Note that after following the regular installation instructions, in order to build a software switch from a P4 program, you can follow the instructions [here](https://github.com/kth-step/HOL4P4/blob/dev_hol4p4exe/hol/retrofit_sem/programs/README.md) (or [here](https://github.com/kth-step/HOL4P4/blob/dev_hol4p4exe/hol/cake_sem/programs/README.md), for the optimized version).
 
 ### petr4
 
@@ -60,7 +60,7 @@ The Lua scripts run by the test scripts are located in the the [kth-step fork of
 
 ## Usage
 
-First, run the `setup_test_env.sh` script on every startup (after every boot). Note that you may have issues reserving hugepages if you don't run the script right after a fresh boot: you may also try to shrink the hugepage size.
+First, run the `setup_test_env.sh` script on every startup (after every boot). Note that you may have issues reserving hugepages if you don't run the script right after a fresh boot: you may also try to shrink the hugepage size if your hardware is not cooperating.
 
 Then run e.g.
 
@@ -70,4 +70,4 @@ sudo ./test_hol4p4.sh /home/my_user/src/Pktgen-DPDK/
   
 while ensuring the configuration parameters and command-line arguments of the script is what you want.
 
-The current scripts are tailored towards a CPU with at least 4 non-hyperthreaded cores mapped to IDs 0 and up (for example, Intel Lunar Lake and Arrow Lake CPUs). Certain Intel CPUs from generations preceding Lunar Lake assign hyperthreaded cores adjacent IDs, which causes degraded performance. Check your layout with `lscpu -e` and adjust the core assignments in the scripts starting with `test_` accordingly - ideally, you want to use distinct, high-performance physical cores. For AMD CPUs, beware that the lower-numbered cores are not always the most performant. You may have to identify the highest-clocked cores manually for an ideal core assignment. Needless to say, doing anything at in the background during testing will affect results.
+The current scripts are tailored towards a CPU with at least 4 non-hyperthreaded cores mapped to IDs 0 and up (for example, Intel Lunar Lake and Arrow Lake CPUs). Certain Intel CPUs from generations immediately preceding Lunar Lake assign hyperthreaded cores adjacent IDs, which causes degraded performance with the current core load balacing. Check your layout with `lscpu -e` and adjust the core assignments in the scripts starting with `test_` accordingly - ideally, you want to use distinct, high-performance physical cores for every job. For AMD CPUs, beware that the lower-numbered cores are not always the most performant. You may have to identify the highest-clocked cores manually for an ideal core assignment. Needless to say, doing anything at in the background during testing will affect results. Also, running the setup in a VM or container can also adversely affect results.
