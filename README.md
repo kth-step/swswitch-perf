@@ -12,7 +12,7 @@ on Ubuntu 26.04.
 
 ## Installation notes
 
-The `setup_test_env.sh` uses the `linux-tools` package to set performance mode from the command line. This requires installing
+The `setup_test_env.sh` uses the `linux-tools` package to ensure performance mode is set. This requires installing
 
 ```bash
 sudo apt-get install linux-tools-$(uname -r)
@@ -69,3 +69,5 @@ sudo ./test_hol4p4.sh /home/my_user/src/Pktgen-DPDK/
 ```
   
 while ensuring the configuration parameters and command-line arguments of the script is what you want.
+
+The current scripts are tailored towards a CPU with at least 4 non-hyperthreaded cores mapped to IDs 0 and up (for example, Intel Lunar Lake and Arrow Lake CPUs). Certain Intel CPUs from generations preceding Lunar Lake assign hyperthreaded cores adjacent IDs, which causes degraded performance. Check your layout with `lscpu -e` and adjust the core assignments in the scripts starting with `test_` accordingly - ideally, you want to use distinct, high-performance physical cores. For AMD CPUs, beware that the lower-numbered cores are not always the most performant. You may have to identify the highest-clocked cores manually for an ideal core assignment. Needless to say, doing anything at in the background during testing will affect results.
